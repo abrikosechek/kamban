@@ -1,37 +1,16 @@
 import styles from "./KanbanCard.module.scss";
-import { type ReactNode } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { type CSSProperties, type ReactNode, type Ref } from "react";
 
 type KanbanCardProps = {
-  id: string;
-  columnId: string;
   children?: ReactNode;
+  ref?: Ref<HTMLDivElement>;
+  style?: CSSProperties;
+  id: string;
 };
 
-export const KanbanCard = ({ id, columnId, children }: KanbanCardProps) => {
-  const { listeners, attributes, setNodeRef, transform, transition } =
-    useSortable({
-      id,
-      data: {
-        type: "card",
-        columnId,
-      },
-    });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
-
+export const KanbanCard = ({ ref, children, id, style }: KanbanCardProps) => {
   return (
-    <div
-      ref={setNodeRef}
-      className={styles.card}
-      style={style}
-      {...listeners}
-      {...attributes}
-    >
+    <div ref={ref} className={styles.card} style={style}>
       <p>{id}</p>
       {children}
     </div>

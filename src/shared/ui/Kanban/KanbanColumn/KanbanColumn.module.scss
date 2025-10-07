@@ -1,4 +1,5 @@
 .column {
+  position: relative;
   flex: 0 1 auto;
   width: 300px;
   padding: 6px;
@@ -8,32 +9,6 @@
   user-select: none;
 
   &_lifted {
-    border: 1px solid var(--clr-primary-a0)
-  }
-
-  &__header {
-    position: sticky;
-    left: 0;
-    top: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    height: 40px;
-    padding-bottom: 6px;
-    text-align: center;
-  }
-
-  &__title {
-    font-size: 20px;
-    font-weight: 500;
-  }
-
-  &__content {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-    height: 100%;
+    border: 1px solid var(--clr-primary-a0);
   }
 }
