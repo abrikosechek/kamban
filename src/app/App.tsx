@@ -78,7 +78,9 @@ const SortableColumn = ({ children, id, items }: SortableColumnProps) => {
         <KanbanColumnHeader {...listeners} {...attributes} id={id} />
 
         <KanbanColumnContent ref={setDroppableNodeRef}>
-          <SortableContext items={items} strategy={verticalListSortingStrategy}>{children}</SortableContext>
+          <SortableContext items={items} strategy={verticalListSortingStrategy}>
+            {children}
+          </SortableContext>
         </KanbanColumnContent>
       </KanbanColumn>
     </div>

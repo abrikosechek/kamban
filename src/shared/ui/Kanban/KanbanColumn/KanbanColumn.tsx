@@ -8,7 +8,7 @@ type KanbanColumnProps = {
 };
 
 export const KanbanColumn = ({
-                               children,
+  children,
   border = false,
 }: KanbanColumnProps) => {
   return (
