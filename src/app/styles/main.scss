@@ -1,0 +1,9 @@
+@use "./modules/colors";
+@use "./modules/fonts";
+@use "./modules/reset";
+
+body {
+  background: var(--clr-surface-a0);
+  color: white;
+  font-family: 'Roboto', sans-serif, Arial, Helvetica, monospace;
+}
