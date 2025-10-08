@@ -2,7 +2,7 @@ import styles from "./App.module.scss";
 import { type ReactNode, useMemo, useState } from "react";
 import { KanbanCard, KanbanColumn } from "@/shared/ui";
 import {
-  DndContext,
+  DndContext, DragOverlay,
   PointerSensor,
   useDroppable,
   useSensor,
@@ -61,6 +61,7 @@ const SortableColumn = ({ children, id, items }: SortableColumnProps) => {
     listeners,
     attributes,
     setNodeRef: setSortableNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
   } = useSortable({
@@ -75,7 +76,7 @@ const SortableColumn = ({ children, id, items }: SortableColumnProps) => {
   return (
     <div ref={setSortableNodeRef} style={style}>
       <KanbanColumn id={id}>
-        <KanbanColumnHeader {...listeners} {...attributes} id={id} />
+        <KanbanColumnHeader ref={setActivatorNodeRef} {...listeners} {...attributes} id={id} />
 
         <KanbanColumnContent ref={setDroppableNodeRef}>
           <SortableContext items={items} strategy={verticalListSortingStrategy}>
