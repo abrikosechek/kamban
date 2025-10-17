@@ -1,9 +1,8 @@
 import styles from "./App.module.scss";
-import { type ReactNode, useMemo, useState } from "react";
-import { KanbanCard, KanbanColumn } from "@/shared/ui";
+import { useMemo, useState } from "react";
 import {
   DndContext,
-  type DragEndEvent,
+  type DragMoveEvent,
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
@@ -12,13 +11,17 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import {
+  arrayMove,
   horizontalListSortingStrategy,
   SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { KanbanColumnContent, KanbanColumnHeader } from "@/shared/ui/Kanban";
+import { SortableColumn } from "@/components/Sortable";
+import {
+  KanbanCard,
+  KanbanColumn,
+  KanbanColumnContent,
+  KanbanColumnHeader,
+} from "@/components/Kanban";
 import { produce } from "immer";
 
 type Column = {
@@ -26,92 +29,37 @@ type Column = {
   cards: string[];
 };
 
-// SortableCard
-type SortableCardProps = {
-  id: string;
+type OverItem = {
   columnId: string;
-};
+} & (
+  | {
+      type: "card";
+      cardId: string;
+    }
+  | {
+      type: "column";
+    }
+);
 
-const SortableCard = ({ id, columnId }: SortableCardProps) => {
-  const { listeners, attributes, setNodeRef, transform, transition, isDragging } =
-    useSortable({
-      id,
-      data: {
-        type: "card",
-        columnId,
-      },
-    });
+export const App = () => {
+  const { setNodeRef } = useDroppable({
+    id: "ColumnsDroppable",
+  });
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
-
-  return (
-    <div {...listeners} {...attributes} ref={setNodeRef} style={style}>
-      <KanbanCard style={{ opacity: isDragging ? "0.6" : "1" }} id={id} />
-    </div>
-  );
-};
-
-// SortableColumn
-type SortableColumnProps = {
-  children?: ReactNode;
-  id: string;
-  items: string[];
-};
-
-const SortableColumn = ({ children, id, items }: SortableColumnProps) => {
-  const {
-    listeners,
-    attributes,
-    setNodeRef: setSortableNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-  } = useSortable({
-    id,
-    data: {
-      type: "column",
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 5,
     },
   });
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
-
-  return (
-    <div ref={setSortableNodeRef} style={style}>
-      <KanbanColumn id={id}>
-        <KanbanColumnHeader
-          ref={setActivatorNodeRef}
-          {...listeners}
-          {...attributes}
-          id={id}
-        />
-
-        <KanbanColumnContent>
-          <SortableContext items={items} strategy={verticalListSortingStrategy}>
-            {children}
-          </SortableContext>
-        </KanbanColumnContent>
-      </KanbanColumn>
-    </div>
-  );
-};
-
-// App
-export const App = () => {
-  // Columns and Cards
   const [columns, setColumns] = useState<Column[]>([
     {
       id: "Planned",
-      cards: ["Eat soup", "Write a book"],
+      cards: ["Eat soup", "Write a book", "asd1", "asd2", "asd3"],
     },
     {
       id: "In Work",
-      cards: ["Cook"],
+      cards: ["Cook", "Cook 1", "Cook 2"],
     },
     {
       id: "Complete",
@@ -124,80 +72,121 @@ export const App = () => {
     [columns],
   );
 
-  const { setNodeRef } = useDroppable({
-    id: "ColumnsDroppable",
-  });
-
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: {
-      distance: 5,
-    },
-  });
-
   const sensors = useSensors(pointerSensor);
 
-  const [dragElement, setDragElement] = useState<{
+  const [activeItem, setActiveItem] = useState<{
+    type: "card" | "column";
     id: string;
+    columnId: string;
   } | null>(null);
 
+  const [overItem, setOverItem] = useState<OverItem | null>(null);
+
   const handleDragStart = (event: DragStartEvent) => {
-    // console.log(event);
-    setDragElement({
-      id: `${event.active.id}`,
+    const active = event.active;
+    const activeData = active.data.current;
+
+    if (!activeData) {
+      console.error("Draggable data isn't provided");
+      return;
+    }
+
+    setActiveItem({
+      type: activeData.type,
+      id: `${active.id}`,
+      columnId: activeData.columnId,
+    });
+    setOverItem({
+      type: activeData.type,
+      cardId: `${active.id}`,
+      columnId: activeData.columnId,
     });
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const active = event.active;
-    const activeData = active.data.current;
+  const handleDragMove = (event: DragMoveEvent) => {
     const over = event.over;
     const overData = over?.data.current;
 
-    console.log(over);
-
-    if (!activeData || !overData) {
-      console.error("No active or over item data provided");
+    if (!event.over || !overData) {
+      setOverItem(null);
       return;
     }
-    // move card
-    if (activeData.type == "card") {
-      const moveToColumnId =
-        overData.type == "column" ? over.id : overData.columnId;
 
-      // to another column
-      if (!(activeData.columnId === moveToColumnId)) {
-        console.log(
-          `Move card "${active.id}" from column "${activeData.columnId}" to column "${moveToColumnId}"`,
-        );
-
-        setColumns(
-          produce((draft) => {
-            const cardColumn = draft.find(
-              (column) => column.id === activeData.columnId,
-            );
-            const columnToAdd = draft.find(
-              (column) => column.id === moveToColumnId,
-            );
-
-            if (!cardColumn || !columnToAdd) {
-              console.error("Immer: Column not found");
-              return;
-            }
-
-            const cardIndex = cardColumn.cards.indexOf(`${active.id}`);
-
-            if (cardIndex === -1) {
-              console.error("Immer: Card not found in column");
-              return;
-            }
-
-            cardColumn.cards.splice(cardIndex, 1);
-
-            columnToAdd.cards.push(`${active.id}`);
-          }),
-        );
-      }
+    switch (overData.type) {
+      case "card":
+        setOverItem({
+          type: overData.type,
+          columnId: overData.columnId,
+          cardId: `${over.id}`,
+        });
+        break;
+      case "column":
+        setOverItem({
+          type: overData.type,
+          columnId: overData.columnId,
+        });
+        break;
     }
+  };
+
+  const handleDragEnd = () => {
+    if (overItem === null || activeItem === null) {
+      setActiveItem(null);
+      setOverItem(null);
+      return;
+    }
+
+    if (activeItem.type === "column") {
+      setColumns((columns) => {
+        const oldIndex = columns.findIndex(
+          (column) => column.id === activeItem.columnId,
+        );
+        const newIndex = columns.findIndex(
+          (column) => column.id === overItem.columnId,
+        );
+
+        return arrayMove(columns, oldIndex, newIndex);
+      });
+    } else if (activeItem.type === "card") {
+      setColumns(
+        produce((draft) => {
+          const activeColumnId = draft.findIndex(
+            (column) => column.id === activeItem.columnId,
+          );
+          const overColumnId = draft.findIndex(
+            (column) => column.id === overItem.columnId,
+          );
+
+          if (activeColumnId === -1 || overColumnId === -1) return;
+
+          // Move card over column
+          if (overItem.type === "column") {
+            draft[activeColumnId].cards = draft[activeColumnId].cards.filter(
+              (card) => card !== activeItem.id,
+            );
+            draft[overColumnId].cards.unshift(activeItem.id);
+          }
+          // Move card over another card
+          else if (overItem.type === "card") {
+            if (activeItem.id === overItem.cardId) return;
+
+            const newItemKey = draft[overColumnId].cards.indexOf(overItem.cardId)
+            draft[activeColumnId].cards = draft[activeColumnId].cards.filter(
+              (card) => card !== activeItem.id,
+            );
+
+            if(newItemKey === -1) return
+
+            draft[overColumnId].cards.splice(newItemKey, 0, activeItem.id)
+          }
+        }),
+      );
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveItem(null);
+    setOverItem(null);
   };
 
   return (
@@ -209,7 +198,9 @@ export const App = () => {
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <main ref={setNodeRef} className={styles.layout__content}>
           <SortableContext
@@ -221,23 +212,27 @@ export const App = () => {
                 key={column.id}
                 id={column.id}
                 items={column.cards}
-              >
-                {column.cards.map((card) => (
-                  <SortableCard id={card} columnId={column.id} />
-                ))}
-              </SortableColumn>
+              />
             ))}
           </SortableContext>
         </main>
 
         <DragOverlay>
-          {dragElement && (
-            <div className={styles["overlay-card"]}>
-              <div className={styles["overlay-card__container"]}>
-                <p>{dragElement.id}</p>
-              </div>
-            </div>
-          )}
+          {activeItem &&
+            (activeItem.type === "card" ? (
+              <KanbanCard id={activeItem.id} />
+            ) : (
+              <KanbanColumn>
+                <KanbanColumnHeader id={activeItem.columnId} />
+                <KanbanColumnContent>
+                  {columns
+                    .find((column) => column.id === activeItem.id)
+                    ?.cards.map((card) => (
+                      <KanbanCard id={card} />
+                    ))}
+                </KanbanColumnContent>
+              </KanbanColumn>
+            ))}
         </DragOverlay>
       </DndContext>
     </div>
