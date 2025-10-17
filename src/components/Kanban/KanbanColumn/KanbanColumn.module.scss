@@ -1,0 +1,14 @@
+.column {
+  position: relative;
+  flex: 0 1 auto;
+  width: 300px;
+  padding: 6px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+  background: var(--clr-surface-a10);
+  user-select: none;
+
+  &_lifted {
+    border: 1px solid var(--clr-primary-a0);
+  }
+}
