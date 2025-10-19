@@ -159,10 +159,26 @@ export const App = () => {
           else if (overItem.type === "card") {
             if (activeItem.id === overItem.cardId) return;
 
+            // Move inside same column
+            // if (activeItem.columnId === overItem.columnId) {
+            //   const oldIndex = draft[activeColumnId].cards.indexOf(
+            //     activeItem.id,
+            //   );
+            //   const newIndex = draft[activeColumnId].cards.indexOf(
+            //     overItem.cardId,
+            //   );
+            //   draft[activeColumnId].cards = arrayMove(
+            //     draft[activeColumnId].cards,
+            //     oldIndex,
+            //     newIndex,
+            //   );
+            //   return;
+            // }
+
+            // Move into another column
             const newItemKey = draft[overColumnId].cards.indexOf(
               overItem.cardId,
             );
-
             if (newItemKey === -1) return;
 
             draft[activeColumnId].cards = draft[activeColumnId].cards.filter(
