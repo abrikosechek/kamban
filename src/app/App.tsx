@@ -5,10 +5,7 @@ import {
   type DragMoveEvent,
   DragOverlay,
   type DragStartEvent,
-  PointerSensor,
   useDroppable,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -46,12 +43,6 @@ export const App = () => {
     id: "ColumnsDroppable",
   });
 
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: {
-      distance: 5,
-    },
-  });
-
   const [columns, setColumns] = useState<Column[]>([
     {
       id: "Planned",
@@ -67,12 +58,10 @@ export const App = () => {
     },
   ]);
 
-  const columnsIds = useMemo(
+  const columnsOrdering = useMemo(
     () => columns.map((column) => column.id),
     [columns],
   );
-
-  const sensors = useSensors(pointerSensor);
 
   const [activeItem, setActiveItem] = useState<{
     type: "card" | "column";
@@ -170,14 +159,16 @@ export const App = () => {
           else if (overItem.type === "card") {
             if (activeItem.id === overItem.cardId) return;
 
-            const newItemKey = draft[overColumnId].cards.indexOf(overItem.cardId)
+            const newItemKey = draft[overColumnId].cards.indexOf(
+              overItem.cardId,
+            );
+
+            if (newItemKey === -1) return;
+
             draft[activeColumnId].cards = draft[activeColumnId].cards.filter(
               (card) => card !== activeItem.id,
             );
-
-            if(newItemKey === -1) return
-
-            draft[overColumnId].cards.splice(newItemKey, 0, activeItem.id)
+            draft[overColumnId].cards.splice(newItemKey, 0, activeItem.id);
           }
         }),
       );
@@ -196,7 +187,6 @@ export const App = () => {
       </div>
 
       <DndContext
-        sensors={sensors}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -204,7 +194,7 @@ export const App = () => {
       >
         <main ref={setNodeRef} className={styles.layout__content}>
           <SortableContext
-            items={columnsIds}
+            items={columnsOrdering}
             strategy={horizontalListSortingStrategy}
           >
             {columns.map((column) => (
