@@ -53,7 +53,7 @@ export const SortableColumn = memo(({ id, items }: SortableColumnProps) => {
         <KanbanColumnContent>
           <SortableContext items={items} strategy={verticalListSortingStrategy}>
             {items.map((item) => (
-              <SortableCard id={item} columnId={id} />
+              <SortableCard key={item} id={item} columnId={id} />
             ))}
           </SortableContext>
         </KanbanColumnContent>
