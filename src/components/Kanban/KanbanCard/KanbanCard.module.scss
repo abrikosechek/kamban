@@ -5,4 +5,8 @@
   background: var(--clr-surface-a0);
   cursor: pointer;
   user-select: none;
+
+  &_lifted {
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+  }
 }
