@@ -189,6 +189,9 @@ export const App = () => {
         }),
       );
     }
+
+    setActiveItem(null);
+    setOverItem(null);
   };
 
   const handleDragCancel = () => {
@@ -226,7 +229,7 @@ export const App = () => {
         <DragOverlay>
           {activeItem &&
             (activeItem.type === "card" ? (
-              <KanbanCard id={activeItem.id} />
+              <KanbanCard id={activeItem.id} lifted />
             ) : (
               <KanbanColumn>
                 <KanbanColumnHeader id={activeItem.columnId} />
