@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import {
   DndContext,
   type DragMoveEvent,
+  type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
   useDroppable,
@@ -92,7 +93,7 @@ export const App = () => {
     });
   };
 
-  const handleDragMove = (event: DragMoveEvent) => {
+  const handleDragOver = (event: DragOverEvent) => {
     const over = event.over;
     const overData = over?.data.current;
 
@@ -207,7 +208,7 @@ export const App = () => {
 
       <DndContext
         onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
