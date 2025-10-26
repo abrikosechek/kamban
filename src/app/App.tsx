@@ -1,48 +1,152 @@
 import styles from "./App.module.scss";
-import { useMemo, useState } from "react";
-import {
-  DndContext,
-  type DragMoveEvent,
-  type DragOverEvent,
-  DragOverlay,
-  type DragStartEvent,
-  useDroppable,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  horizontalListSortingStrategy,
-  SortableContext,
-} from "@dnd-kit/sortable";
-import { SortableColumn } from "@/components/Sortable";
+import { type ReactNode, useMemo, useState } from "react";
 import {
   KanbanCard,
   KanbanColumn,
   KanbanColumnContent,
   KanbanColumnHeader,
 } from "@/components/Kanban";
-import { produce } from "immer";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  DndContext,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 
 type Column = {
   id: string;
   cards: string[];
 };
 
-type OverItem = {
+type ActiveItem = {
+  type: "card";
+  cardId: string;
   columnId: string;
-} & (
-  | {
-      type: "card";
-      cardId: string;
+};
+
+type OverItem = {
+  type: "card";
+  columnId: string;
+};
+
+type SortableCardProps = {
+  id: string;
+  columnId: string;
+};
+
+const SortableCard = ({ id, columnId }: SortableCardProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id,
+    data: {
+      type: "card",
+      cardId: id,
+      columnId: columnId,
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? "0.5" : "1",
+  };
+
+  return (
+    <div ref={setNodeRef} {...attributes} {...listeners} style={style}>
+      <KanbanCard id={id} />
+    </div>
+  );
+};
+
+type SortableColumnProps = {
+  children?: ReactNode;
+  id: string;
+  items: string[];
+  activeItem?: ActiveItem | null;
+  overItem?: OverItem | null;
+};
+
+const SortableColumn = ({
+  children,
+  id,
+  items,
+  activeItem,
+  overItem,
+}: SortableColumnProps) => {
+  const { setNodeRef } = useDroppable({
+    id: `column-${id}`,
+  });
+
+  const sortedItems = useMemo(() => {
+    let itemsClone = structuredClone(items);
+
+    // Add item if it's from other column
+    if (
+      activeItem &&
+      overItem &&
+      activeItem.columnId !== id &&
+      overItem.columnId === id
+    ) {
+      itemsClone.unshift(activeItem.cardId);
     }
-  | {
-      type: "column";
+
+    //  Or mercilessly remove item from original column
+    if (
+      activeItem &&
+      activeItem.columnId === id &&
+      (!overItem || overItem.columnId !== id)
+    ) {
+      itemsClone = itemsClone.filter((item) => item !== activeItem.cardId);
     }
-);
+
+    return itemsClone;
+  }, [items, activeItem, overItem, id]);
+
+  return (
+    <KanbanColumn>
+      <KanbanColumnHeader id={id} />
+
+      <SortableContext
+        id={`column-${id}`}
+        items={sortedItems}
+        strategy={verticalListSortingStrategy}
+      >
+        <KanbanColumnContent ref={setNodeRef}>
+          {sortedItems.map((item) => (
+            <SortableCard key={item} id={item} columnId={id} />
+          ))}
+
+          {children}
+        </KanbanColumnContent>
+      </SortableContext>
+    </KanbanColumn>
+  );
+};
 
 export const App = () => {
-  const { setNodeRef } = useDroppable({
-    id: "ColumnsDroppable",
-  });
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+  );
 
   const [columns, setColumns] = useState<Column[]>([
     {
@@ -59,17 +163,7 @@ export const App = () => {
     },
   ]);
 
-  const columnsOrdering = useMemo(
-    () => columns.map((column) => column.id),
-    [columns],
-  );
-
-  const [activeItem, setActiveItem] = useState<{
-    type: "card" | "column";
-    id: string;
-    columnId: string;
-  } | null>(null);
-
+  const [activeItem, setActiveItem] = useState<ActiveItem | null>(null);
   const [overItem, setOverItem] = useState<OverItem | null>(null);
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -77,124 +171,46 @@ export const App = () => {
     const activeData = active.data.current;
 
     if (!activeData) {
-      console.error("Draggable data isn't provided");
+      console.error("Sortable item data isn't provided");
       return;
     }
 
-    setActiveItem({
-      type: activeData.type,
-      id: `${active.id}`,
-      columnId: activeData.columnId,
-    });
-    setOverItem({
-      type: activeData.type,
-      cardId: `${active.id}`,
-      columnId: activeData.columnId,
-    });
+    if (activeData.type === "card") {
+      setActiveItem({
+        type: "card",
+        cardId: active.id.toString(),
+        columnId: activeData.columnId,
+      });
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
+    const active = event.active;
+    const activeData = active.data.current;
     const over = event.over;
     const overData = over?.data.current;
 
-    if (!event.over || !overData) {
+    if (!over) {
       setOverItem(null);
+    }
+
+    if (!activeData || !overData) {
+      console.error("Sortable active or item data isn't provided!");
       return;
     }
 
-    switch (overData.type) {
-      case "card":
-        setOverItem({
-          type: overData.type,
-          columnId: overData.columnId,
-          cardId: `${over.id}`,
-        });
-        break;
-      case "column":
-        setOverItem({
-          type: overData.type,
-          columnId: overData.columnId,
-        });
-        break;
-    }
+    setOverItem({
+      type: "card",
+      columnId: overData.columnId,
+    });
+
+    console.log(overItem);
   };
 
   const handleDragEnd = () => {
-    if (overItem === null || activeItem === null) {
-      setActiveItem(null);
-      setOverItem(null);
-      return;
-    }
-
-    if (activeItem.type === "column") {
-      setColumns((columns) => {
-        const oldIndex = columns.findIndex(
-          (column) => column.id === activeItem.columnId,
-        );
-        const newIndex = columns.findIndex(
-          (column) => column.id === overItem.columnId,
-        );
-
-        return arrayMove(columns, oldIndex, newIndex);
-      });
-    } else if (activeItem.type === "card") {
-      setColumns(
-        produce((draft) => {
-          const activeColumnId = draft.findIndex(
-            (column) => column.id === activeItem.columnId,
-          );
-          const overColumnId = draft.findIndex(
-            (column) => column.id === overItem.columnId,
-          );
-
-          if (activeColumnId === -1 || overColumnId === -1) return;
-
-          // Move card over column
-          if (overItem.type === "column") {
-            draft[activeColumnId].cards = draft[activeColumnId].cards.filter(
-              (card) => card !== activeItem.id,
-            );
-            draft[overColumnId].cards.unshift(activeItem.id);
-          }
-          // Move card over another card
-          else if (overItem.type === "card") {
-            if (activeItem.id === overItem.cardId) return;
-
-            // Move inside same column
-            // if (activeItem.columnId === overItem.columnId) {
-            //   const oldIndex = draft[activeColumnId].cards.indexOf(
-            //     activeItem.id,
-            //   );
-            //   const newIndex = draft[activeColumnId].cards.indexOf(
-            //     overItem.cardId,
-            //   );
-            //   draft[activeColumnId].cards = arrayMove(
-            //     draft[activeColumnId].cards,
-            //     oldIndex,
-            //     newIndex,
-            //   );
-            //   return;
-            // }
-
-            // Move into another column
-            const newItemKey = draft[overColumnId].cards.indexOf(
-              overItem.cardId,
-            );
-            if (newItemKey === -1) return;
-
-            draft[activeColumnId].cards = draft[activeColumnId].cards.filter(
-              (card) => card !== activeItem.id,
-            );
-            draft[overColumnId].cards.splice(newItemKey, 0, activeItem.id);
-          }
-        }),
-      );
-    }
-
     setActiveItem(null);
     setOverItem(null);
   };
-
   const handleDragCancel = () => {
     setActiveItem(null);
     setOverItem(null);
@@ -207,42 +223,26 @@ export const App = () => {
       </div>
 
       <DndContext
+        sensors={sensors}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <main ref={setNodeRef} className={styles.layout__content}>
-          <SortableContext
-            items={columnsOrdering}
-            strategy={horizontalListSortingStrategy}
-          >
-            {columns.map((column) => (
-              <SortableColumn
-                key={column.id}
-                id={column.id}
-                items={column.cards}
-              />
-            ))}
-          </SortableContext>
+        <main className={styles.layout__content}>
+          {columns.map((column) => (
+            <SortableColumn
+              key={column.id}
+              id={column.id}
+              items={column.cards}
+              activeItem={activeItem}
+              overItem={overItem}
+            />
+          ))}
         </main>
 
         <DragOverlay>
-          {activeItem &&
-            (activeItem.type === "card" ? (
-              <KanbanCard id={activeItem.id} lifted />
-            ) : (
-              <KanbanColumn>
-                <KanbanColumnHeader id={activeItem.columnId} />
-                <KanbanColumnContent>
-                  {columns
-                    .find((column) => column.id === activeItem.id)
-                    ?.cards.map((card) => (
-                      <KanbanCard id={card} />
-                    ))}
-                </KanbanColumnContent>
-              </KanbanColumn>
-            ))}
+          {activeItem && <KanbanCard id={activeItem.cardId} />}
         </DragOverlay>
       </DndContext>
     </div>
