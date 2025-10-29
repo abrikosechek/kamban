@@ -1,17 +1,17 @@
 import styles from "./KanbanColumn.module.scss";
-import { type ReactNode } from "react";
+import { type HTMLAttributes, type ReactNode, type Ref } from "react";
 
-type KanbanColumnProps = {
+type KanbanColumnProps = HTMLAttributes<HTMLDivElement> & {
+  ref?: Ref<HTMLDivElement>;
   children?: ReactNode;
   border?: boolean;
 };
 
-export const KanbanColumn = ({
-  children,
-  border = false,
-}: KanbanColumnProps) => {
+export const KanbanColumn = (props: KanbanColumnProps) => {
+  const { ref, children, border = false, ...otherProps } = props;
+
   return (
-    <div className={`${styles.column} ${border ? styles.column_lifted : ""}`}>
+    <div ref={ref} className={`${styles.column} ${border ? styles.column_lifted : ""}`} {...otherProps}>
       {children}
     </div>
   );
