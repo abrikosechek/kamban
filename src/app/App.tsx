@@ -1,18 +1,12 @@
 import styles from "./App.module.scss";
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KanbanCard,
   KanbanColumn,
   KanbanColumnContent,
   KanbanColumnHeader,
 } from "@/components/Kanban";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { arrayMove, SortableContext } from "@dnd-kit/sortable";
 import {
   DndContext,
   type DragOverEvent,
@@ -24,148 +18,12 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { produce } from "immer";
+import type { ActiveItem, OverItem } from "@/shared/types.ts";
+import {SortableColumn} from "@/components/Sortable";
 
 type Column = {
   id: string;
   cards: string[];
-};
-
-type ActiveItem =
-  | {
-      type: "card";
-      cardId: string;
-      columnId: string;
-    }
-  | {
-      type: "column";
-      columnId: string;
-    };
-
-type OverItem =
-  | {
-      type: "card";
-      cardId: string;
-      columnId: string;
-    }
-  | {
-      type: "column";
-      columnId: string;
-    };
-
-type SortableCardProps = {
-  id: string;
-  columnId: string;
-};
-
-const SortableCard = ({ id, columnId }: SortableCardProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id,
-    data: {
-      type: "card",
-      cardId: id,
-      columnId: columnId,
-    },
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? "0.5" : "1",
-  };
-
-  return (
-    <div ref={setNodeRef} {...attributes} {...listeners} style={style}>
-      <KanbanCard id={id} />
-    </div>
-  );
-};
-
-type SortableColumnProps = {
-  children?: ReactNode;
-  id: string;
-  items: string[];
-  activeItem?: ActiveItem | null;
-  overItem?: OverItem | null;
-};
-
-const SortableColumn = ({
-  children,
-  id,
-  items,
-  activeItem,
-  overItem,
-}: SortableColumnProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setSortableNodeRef,
-    transition,
-    transform,
-    isDragging,
-  } = useSortable({
-    id,
-    data: {
-      type: "column",
-    },
-  });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-    opacity: isDragging ? "0.5" : "1",
-  };
-
-  const { setNodeRef: setDroppableNodeRef } = useDroppable({
-    id: `droppable-column-${id}`,
-  });
-
-  const sortedItems = useMemo(() => {
-    let itemsClone = structuredClone(items);
-
-    if (activeItem && activeItem.type === "card") {
-      // Add item if it's from other column
-      if (overItem && activeItem.columnId !== id && overItem.columnId === id) {
-        itemsClone.push(activeItem.cardId);
-      }
-
-      //  Or mercilessly remove item from original column
-      if (
-        activeItem.columnId === id &&
-        (!overItem || overItem.columnId !== id)
-      ) {
-        itemsClone = itemsClone.filter((item) => item !== activeItem.cardId);
-      }
-    }
-
-    return itemsClone;
-  }, [items, activeItem, overItem, id]);
-
-  return (
-    <KanbanColumn style={style} ref={setSortableNodeRef}>
-      <KanbanColumnHeader {...attributes} {...listeners} id={id} />
-
-      <KanbanColumnContent ref={setDroppableNodeRef}>
-        <SortableContext
-          id={`column-${id}`}
-          items={sortedItems}
-          strategy={verticalListSortingStrategy}
-        >
-          {sortedItems.map((item) => (
-            <SortableCard key={item} id={item} columnId={id} />
-          ))}
-        </SortableContext>
-
-        {children}
-      </KanbanColumnContent>
-    </KanbanColumn>
-  );
 };
 
 export const App = () => {
@@ -319,8 +177,8 @@ export const App = () => {
                   (card) => card !== activeItem.cardId,
                 );
 
-                const newIndex = newColumn.cards.indexOf(overItem.cardId)
-                newColumn.cards.splice(newIndex + 1, 0, activeItem.cardId)
+                const newIndex = newColumn.cards.indexOf(overItem.cardId);
+                newColumn.cards.splice(newIndex + 1, 0, activeItem.cardId);
               }
             }
           }
@@ -331,6 +189,7 @@ export const App = () => {
     setActiveItem(null);
     setOverItem(null);
   };
+
   const handleDragCancel = () => {
     setActiveItem(null);
     setOverItem(null);
