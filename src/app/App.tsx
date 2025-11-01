@@ -132,7 +132,7 @@ const SortableColumn = ({
     if (activeItem && activeItem.type === "card") {
       // Add item if it's from other column
       if (overItem && activeItem.columnId !== id && overItem.columnId === id) {
-        itemsClone.unshift(activeItem.cardId);
+        itemsClone.push(activeItem.cardId);
       }
 
       //  Or mercilessly remove item from original column
