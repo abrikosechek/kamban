@@ -3,7 +3,7 @@ import { KanbanCard } from "@/components/Kanban";
 import { CSS } from "@dnd-kit/utilities";
 
 type SortableCardProps = {
-  id: string;
+  id: number;
   columnId: string;
 };
 
@@ -32,7 +32,7 @@ export const SortableCard = ({ id, columnId }: SortableCardProps) => {
 
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} style={style}>
-      <KanbanCard id={id} />
+      <KanbanCard taskId={id} />
     </div>
   );
 };

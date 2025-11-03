@@ -13,7 +13,7 @@ import {SortableCard} from "./SortableCard.tsx";
 type SortableColumnProps = {
   children?: ReactNode;
   id: string;
-  items: string[];
+  items: number[];
   activeItem?: ActiveItem | null;
   overItem?: OverItem | null;
 };

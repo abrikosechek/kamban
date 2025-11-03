@@ -1,7 +1,7 @@
 export type ActiveItem =
   | {
       type: "card";
-      cardId: string;
+      cardId: number;
       columnId: string;
     }
   | {
@@ -12,10 +12,15 @@ export type ActiveItem =
 export type OverItem =
   | {
       type: "card";
-      cardId: string;
+      cardId: number;
       columnId: string;
     }
   | {
       type: "column";
       columnId: string;
     };
+
+export type Task = {
+  id: number;
+  title: string;
+};

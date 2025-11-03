@@ -4,18 +4,27 @@ import {
   type HTMLAttributes,
   type ReactNode,
   type Ref,
+  useMemo,
 } from "react";
+import { useTasksStore } from "@/store";
 
 type KanbanCardProps = HTMLAttributes<HTMLDivElement> & {
   children?: ReactNode;
   ref?: Ref<HTMLDivElement>;
+  taskId: number;
   style?: CSSProperties;
-  id: string;
   lifted?: boolean;
 };
 
 export const KanbanCard = (props: KanbanCardProps) => {
-  const { ref, children, id, style, lifted = false, ...otherProps } = props;
+  const { ref, children, taskId, style, lifted = false, ...otherProps } = props;
+
+  const { tasks } = useTasksStore();
+
+  const task = useMemo(
+    () => tasks.find((task) => task.id === taskId),
+    [taskId, tasks],
+  );
 
   return (
     <div
@@ -24,8 +33,14 @@ export const KanbanCard = (props: KanbanCardProps) => {
       style={style}
       {...otherProps}
     >
-      <p>{id}</p>
-      {children}
+      {task ? (
+        <>
+          <p>{task.title}</p>
+          {children}
+        </>
+      ) : (
+        <p>Task with id "{taskId}" not found</p>
+      )}
     </div>
   );
 };

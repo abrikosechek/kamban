@@ -19,11 +19,12 @@ import {
 } from "@dnd-kit/core";
 import { produce } from "immer";
 import type { ActiveItem, OverItem } from "@/shared/types.ts";
-import {SortableColumn} from "@/components/Sortable";
+
+import { SortableColumn } from "@/components/Sortable";
 
 type Column = {
   id: string;
-  cards: string[];
+  cards: number[];
 };
 
 export const App = () => {
@@ -42,11 +43,11 @@ export const App = () => {
   const [columns, setColumns] = useState<Column[]>([
     {
       id: "Planned",
-      cards: ["Eat soup", "Write a book", "asd1", "asd2", "asd3"],
+      cards: [1, 2, 3, 4, 5],
     },
     {
       id: "In Work",
-      cards: ["Cook", "Cook 1", "Cook 2"],
+      cards: [6, 7, 8],
     },
     {
       id: "Complete",
@@ -74,7 +75,7 @@ export const App = () => {
     if (activeData.type === "card") {
       setActiveItem({
         type: "card",
-        cardId: active.id.toString(),
+        cardId: Number(active.id),
         columnId: activeData.columnId,
       });
     } else if (activeData.type === "column") {
@@ -104,7 +105,7 @@ export const App = () => {
     if (overData.type === "card") {
       setOverItem({
         type: "card",
-        cardId: over.id.toString(),
+        cardId: Number(over.id),
         columnId: overData.columnId,
       });
     } else if (overData.type === "column") {
@@ -223,7 +224,9 @@ export const App = () => {
         </main>
 
         <DragOverlay>
-          {activeItem?.type === "card" && <KanbanCard id={activeItem.cardId} />}
+          {activeItem?.type === "card" && (
+            <KanbanCard taskId={activeItem.cardId} />
+          )}
           {activeItem?.type === "column" && (
             <KanbanColumn>
               <KanbanColumnHeader id={activeItem.columnId} />
@@ -231,8 +234,8 @@ export const App = () => {
               <KanbanColumnContent>
                 {columns
                   .find((column) => column.id === activeItem.columnId)
-                  ?.cards.map((card) => (
-                    <KanbanCard key={card} id={card} />
+                  ?.cards.map((cardId) => (
+                    <KanbanCard taskId={cardId} />
                   ))}
               </KanbanColumnContent>
             </KanbanColumn>
